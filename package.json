@@ -1,0 +1,17 @@
+{
+  "name": "ion-sortedset",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "test.js"
+  },
+  "keywords": [],
+  "author": "Ahmed El Adly https://github.com/3adly96",
+  "license": "ISC",
+  "dependencies": {
+    "debug": "^4.3.3",
+    "ioredis": "^4.28.2",
+    "nanotimer": "^0.3.15"
+  }
+}
