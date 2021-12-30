@@ -10,7 +10,8 @@ module.exports = class RedisTimeMachine {
   }
 
   async listenToSortedSet({ key, timestamp, onData }) {
-    let result = await this.redisClient.zrangebyscore(...[key, timestamp, timestamp, 'WITHSCORES']);
+    let args = [key, timestamp, timestamp, 'WITHSCORES']
+    let result = await this.redisClient.zrangebyscore(...args);
     if (result.length !== 0) {
       if (timestamp <= Date.now()) {
         for (let i = 0; i < result.length; i += 2) {
@@ -27,11 +28,13 @@ module.exports = class RedisTimeMachine {
         return this.listenToSortedSet({ key: key, timestamp: timestamp, onData });
       }
     }
+    await this.delay('50u');
     this.listenToSortedSet({ key: key, timestamp: ++timestamp, onData });
   }
 
   async emitToSortedSet({ key, json, timestamp }) {
     let args = [key, 'NX', timestamp];
+    console.log(`${json.message.call} will be executed on ${timestamp}`)
     let jsonString = JSON.stringify(json);
     args.push(jsonString);
     await this.redisClient.zadd(...args);
