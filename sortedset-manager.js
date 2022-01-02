@@ -34,7 +34,7 @@ module.exports = class RedisTimeMachine {
 
   async emitToSortedSet({ key, json, timestamp }) {
     let args = [key, 'NX', timestamp];
-    console.log(`${json.message.call} will be executed on ${timestamp}`)
+    console.log(`${json.call} will be executed on ${timestamp}`)
     let jsonString = JSON.stringify(json);
     args.push(jsonString);
     await this.redisClient.zadd(...args);
