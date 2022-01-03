@@ -1,5 +1,6 @@
 
 const NanoTimer = require('nanotimer');
+const debug = require('debug')('ion-sortedset');
 
 module.exports = class RedisTimeMachine {
 
@@ -10,7 +11,14 @@ module.exports = class RedisTimeMachine {
   }
 
   async listenToSortedSet({ key, timestamp, onData }) {
-    let args = [key, timestamp, timestamp, 'WITHSCORES']
+    let now = Date.now();
+    if (Math.floor(timestamp) + 1 > now) {
+      await this.delay('1m');
+      return this.listenToSortedSet({ key: key, timestamp: timestamp, onData })
+    }
+    await this.delay('190m');
+    let args = [key, timestamp, Math.floor(timestamp) + 200, 'WITHSCORES'];
+    console.log(args)
     let result = await this.redisClient.zrangebyscore(...args);
     if (result.length !== 0) {
       if (timestamp <= Date.now()) {
@@ -28,13 +36,12 @@ module.exports = class RedisTimeMachine {
         return this.listenToSortedSet({ key: key, timestamp: timestamp, onData });
       }
     }
-    await this.delay('50u');
-    this.listenToSortedSet({ key: key, timestamp: ++timestamp, onData });
+    this.listenToSortedSet({ key: key, timestamp: Math.floor(timestamp) + 201, onData });
   }
 
   async emitToSortedSet({ key, json, timestamp }) {
-    let args = [key, 'NX', timestamp];
-    console.log(`${json.call} will be executed on ${timestamp}`)
+    let args = [key, timestamp];
+    debug(`${json.call} will be executed on ${timestamp}`)
     let jsonString = JSON.stringify(json);
     args.push(jsonString);
     await this.redisClient.zadd(...args);
