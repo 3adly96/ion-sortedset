@@ -1,10 +1,10 @@
 ### ION-SORTEDSET
-ION-SORTEDSET is a time machine that produces and consumes redis sorted sets in non-blocking manner. ION-SORTEDSET listens to sorted sets that carries an event that will be excecuted in a certain future timestamp in a subprocess.
+ION-SORTEDSET is a time series that produces and consumes redis sorted sets in non-blocking manner. ION-SORTEDSET listens to sorted sets that carries an event that will be excecuted in a certain future timestamp in a subprocess.
 
 
 
 Full Example
-```
+```jsx
 
 const SortedSetManager = require('ion-sortedset');
 const sm = new SortedSetManager({ url: "redis://127.0.0.1:6379" });

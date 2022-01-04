@@ -18,7 +18,6 @@ module.exports = class RedisTimeMachine {
     }
     await this.delay('190m');
     let args = [key, timestamp, Math.floor(timestamp) + 200, 'WITHSCORES'];
-    console.log(args)
     let result = await this.redisClient.zrangebyscore(...args);
     if (result.length !== 0) {
       if (timestamp <= Date.now()) {
