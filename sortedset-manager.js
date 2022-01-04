@@ -11,39 +11,49 @@ module.exports = class RedisTimeMachine {
   }
 
   async listenToSortedSet({ key, timestamp, onData }) {
-    let now = Date.now();
-    if (Math.floor(timestamp) + 1 > now) {
-      await this.delay('1m');
-      return this.listenToSortedSet({ key: key, timestamp: timestamp, onData })
-    }
-    await this.delay('190m');
-    let args = [key, timestamp, Math.floor(timestamp) + 200, 'WITHSCORES'];
-    let result = await this.redisClient.zrangebyscore(...args);
-    if (result.length !== 0) {
-      if (timestamp <= Date.now()) {
-        for (let i = 0; i < result.length; i += 2) {
-          let resultObj = JSON.parse(result[i]);
-          let p = {
-            id: result[i + 1],
-            value: resultObj,
+    try {
+      let now = Date.now();
+      if (Math.floor(timestamp) + 1 > now) {
+        await this.delay('1m');
+        return this.listenToSortedSet({ key: key, timestamp: timestamp, onData })
+      }
+      await this.delay('190m');
+      let args = [key, timestamp, Math.floor(timestamp) + 200, 'WITHSCORES'];
+      let result = await this.redisClient.zrangebyscore(...args);
+      if (result.length !== 0) {
+        if (timestamp <= Date.now()) {
+          for (let i = 0; i < result.length; i += 2) {
+            let resultObj = JSON.parse(result[i]);
+            let p = {
+              id: result[i + 1],
+              value: resultObj,
+            }
+            onData(p);
           }
-          onData(p);
+        }
+        else {
+          await this.delay('500m');
+          return this.listenToSortedSet({ key: key, timestamp: timestamp, onData });
         }
       }
-      else {
-        await this.delay('500m');
-        return this.listenToSortedSet({ key: key, timestamp: timestamp, onData });
-      }
+      this.listenToSortedSet({ key: key, timestamp: Math.floor(timestamp) + 201, onData });
+    } catch (err) {
+      debug('===> Error at listenToSortedSet <===');
+      debug(err);
     }
-    this.listenToSortedSet({ key: key, timestamp: Math.floor(timestamp) + 201, onData });
   }
 
   async emitToSortedSet({ key, json, timestamp }) {
-    let args = [key, timestamp];
-    debug(`${json.call} will be executed on ${timestamp}`)
-    let jsonString = JSON.stringify(json);
-    args.push(jsonString);
-    await this.redisClient.zadd(...args);
+    try {
+      let args = [key, timestamp];
+      debug(`${json.call} will be executed on ${timestamp}`)
+      let jsonString = JSON.stringify(json);
+      args.push(jsonString);
+      await this.redisClient.zadd(...args);
+    } catch (err) {
+      debug('===> Error at emitToSortedSet <===');
+      debug(err);
+    }
   }
 
   async delay(time) {
