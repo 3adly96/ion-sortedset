@@ -9,6 +9,7 @@ const consumer = sm.consumer({
     timestamp: Date.now(),
     key: '3enab',
     keepAlive: true,
+    segmantDuration: 1000, // the timestamps wil be retrieved with blocks of 1 second 
     onMessage: (d) => {
         idsList.push(d.id);
         console.log(`got message`, d);
@@ -34,7 +35,7 @@ async function generatetimestamp() {
             }
             await producer.emit({ key: ssKey, json: ssjson, timestamp: ftimestamp });
         }
-        ftimestamp++
+        ftimestamp++;
     }
 }
 

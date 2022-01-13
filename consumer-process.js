@@ -1,6 +1,7 @@
 const url = process.env.ION_SS_URL;
 const key = process.env.ION_SS_KEY;
 const timestamp = process.env.ION_SS_TIMESTAMP;
+const segmant = process.env.ION_SS_SEGMANT;
 const debug = require('debug')('ion-sortedset');
 
 
@@ -27,7 +28,8 @@ const run = async () => {
         timestamp: timestamp,
         onData: (result) => {
             process.send(result);
-        }
+        },
+        segmantDuration: segmant
     });
 }
 
