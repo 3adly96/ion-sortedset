@@ -12,9 +12,10 @@ const sm = new SortedSetManager({ url: "redis://127.0.0.1:6379" });
 let idsList = [];
 
 const consumer = sm.consumer({
-    timestamp: Date.now(),
+    timestamp: Date.now(), // the timestamp that the listener will start from
     key: '3enab',
     keepAlive: true,
+    segmantDuration: 1000, // the timestamps wil be retrieved as blocks of 1 second range of timestamps
     onMessage: (d) => {
         idsList.push(d.id);
         console.log(`got message`, d);
@@ -40,7 +41,7 @@ async function generatetimestamp() {
             }
             await producer.emit({ key: ssKey, json: ssjson, timestamp: ftimestamp });
         }
-        ftimestamp++
+        ftimestamp++;
     }
 }
 
