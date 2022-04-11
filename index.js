@@ -5,19 +5,19 @@ const path = require('path');
 class Consumer {
     constructor({ url, key, timestamp, keepAlive, onMessage, onError, onClose, segmantDuration }) {
 
-        this.url = url;
-        this.key = key;
-        this.timestamp = timestamp;
+        this.url             = url;
+        this.key             = key;
+        this.timestamp       = timestamp;
         this.segmantDuration = segmantDuration
-        this.keepAlive = keepAlive || false;
-        this.onMessage = onMessage || emptyCb;
-        this.onError = onError || emptyCb;
-        this.onClose = onClose || emptyCb;
-        this.child = null;
-        this.forcedToClose = false;
+        this.keepAlive       = keepAlive || false;
+        this.onMessage       = onMessage || emptyCb;
+        this.onError         = onError || emptyCb;
+        this.onClose         = onClose || emptyCb;
+        this.child           = null;
+        this.forcedToClose   = false;
 
         this.fork();
-
+        this.processListeners();
     }
 
     _faultHandler() {
@@ -35,6 +35,18 @@ class Consumer {
     exitHandler(child, exitCode) {
         child.kill();
         process.exit();
+    }
+
+    processListeners(){
+        //do something when app is closing
+        process.on('exit', this.exitHandler.bind(null, this.child));
+
+        //catches ctrl+c event
+        process.on('SIGINT', this.exitHandler.bind(null, this.child));
+
+        // catches "kill pid" (for example: nodemon restart)
+        process.on('SIGUSR1', this.exitHandler.bind(null, this.child));
+        process.on('SIGUSR2', this.exitHandler.bind(null, this.child));
     }
 
     fork() {
@@ -56,16 +68,6 @@ class Consumer {
             this._faultHandler();
             this.onClose();
         });
-
-        //do something when app is closing
-        process.on('exit', this.exitHandler.bind(null, this.child));
-
-        //catches ctrl+c event
-        process.on('SIGINT', this.exitHandler.bind(null, this.child));
-
-        // catches "kill pid" (for example: nodemon restart)
-        process.on('SIGUSR1', this.exitHandler.bind(null, this.child));
-        process.on('SIGUSR2', this.exitHandler.bind(null, this.child));
     }
 }
 

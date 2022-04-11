@@ -51,7 +51,7 @@ module.exports = class RedisTimeMachine {
       debug(`${json.call} will be executed on ${timestamp}`)
       let jsonString = JSON.stringify(json);
       args.push(jsonString);
-      await this.redisClient.zadd(...args);
+      this.redisClient.zadd(...args);
     } catch (err) {
       debug('===> Error at emitToSortedSet <===');
       debug(err);
