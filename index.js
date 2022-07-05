@@ -78,7 +78,7 @@ class Producer {
     }
 
     emit({ json, key, timestamp }) {
-        this.sortedSetCli.emitToSortedSet({ json, key, timestamp });
+        return this.sortedSetCli.emitToSortedSet({ json, key, timestamp });
     }
 }
 

@@ -13,3 +13,4 @@ node_modules/
 # replit configurations
 *.replit
 *.breakpoints
+.vscode/
