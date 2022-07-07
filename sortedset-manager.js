@@ -47,14 +47,14 @@ module.exports = class RedisTimeMachine {
 
   async emitToSortedSet({ key, json, timestamp }) {
     try {
-      const isExist = await this.isCallExist(json.args.call);
+      const isExist = await this.isCallExist(`${json.args.call}:${json.id}`);
       if(isExist) return {error:'function already scheduled'};
       let args = [key, timestamp];
       debug(`${json.call} will be executed on ${timestamp}`);
       let jsonString = JSON.stringify(json);
       args.push(jsonString);
       this.redisClient.zadd(...args);
-      this.redisClient.set(`schedFunc:${json.args.call}`, true, 'PXAT', parseInt(timestamp));
+      this.redisClient.set(`schedFunc:${json.args.call}:${json.id}`, true, 'PXAT', parseInt(timestamp));
       return 'scheduled';
     } catch (err) {
       debug('===> Error at emitToSortedSet <===');
