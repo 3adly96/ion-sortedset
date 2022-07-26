@@ -80,6 +80,10 @@ class Producer {
     emit({ json, key, timestamp }) {
         return this.sortedSetCli.emitToSortedSet({ json, key, timestamp });
     }
+
+    setAsExecuted({ key, id, json }) {
+        return this.sortedSetCli.setAsExecuted({ key, id, json });
+    }
 }
 
 
@@ -88,9 +92,11 @@ class SortedSetManager {
         if (!url) throw Error(`url is missing`);
         this.url = url;
     }
+
     consumer(args) {
         return (new Consumer({ url: this.url, ...args }));
     }
+
     producer() {
         return (new Producer({ url: this.url }));
     }

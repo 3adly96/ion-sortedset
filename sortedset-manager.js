@@ -5,9 +5,10 @@ const debug = require('debug')('ion-sortedset');
 module.exports = class RedisTimeMachine {
 
   constructor({ url }) {
-    this.redisClient = require('./connect').createClient({ url });
-    this.timer = new NanoTimer();
-    this.ftimestamp = 0;
+    this.redisClient  = require('./connect').createClient({ url });
+    this.timer        = new NanoTimer();
+    this.cleanerTimer = new NanoTimer();
+    this.ftimestamp   = 0;
   }
 
   async listenToSortedSet({ key, timestamp, onData, segmantDuration }) {
@@ -19,19 +20,18 @@ module.exports = class RedisTimeMachine {
       }
       await this.delay(segmantDuration + 'm');
       let args = [key, timestamp, Math.floor(timestamp) + Math.floor(segmantDuration)  , 'WITHSCORES'];
-      let result = await this.redisClient.zrangebyscore(...args);
-      if (result.length !== 0) {
-        let remArgs = [key, '-INF', result[result.length-1]];
+      let functions = await this.redisClient.zrangebyscore(...args);
+      if (functions.length !== 0) {
         if (timestamp <= Date.now()) {
-          for (let i = 0; i < result.length; i += 2) {
-            let resultObj = JSON.parse(result[i]);
+          for (let i = 0; i < functions.length; i += 2) {
+            let functionId = functions[i + 1];
+            let functionObj = JSON.parse(functions[i]);
             let p = {
-              id: result[i + 1],
-              value: resultObj,
+              id: functionId,
+              value: functionObj,
             }
             onData(p);
           }
-          this.redisClient.zremrangebyscore(...remArgs)
         }
         else {
           await this.delay('500m');
@@ -45,21 +45,44 @@ module.exports = class RedisTimeMachine {
     }
   }
 
+  async setCleaner({ key }) {
+    let retries = [];
+    const interv = 1000*60;
+    await this.delayClean(`${interv}m`);
+    const timestamp = Date.now();
+    const args = [key, '-INF', timestamp];
+    const orders = await this.redisClient.zrangebyscore(...args);
+    for(const order of orders) {
+      if(!order.includes('"isExecuted":true')) retries.push(order);
+    }
+    for(const retrie of retries) {
+      this.redisClient.zadd(key, Date.now()+5000, retrie);
+    }
+    this.redisClient.zremrangebyscore(...args);
+    this.setCleaner({ key });
+  }
+
   async emitToSortedSet({ key, json, timestamp }) {
     try {
       const isExist = await this.isCallExist(`${json.args.call}:${json.id}`);
-      if(isExist) return {error:'function already scheduled'};
+      if(isExist) return {error:`function with id ${json.id} already scheduled`};
       let args = [key, timestamp];
       debug(`${json.call} will be executed on ${timestamp}`);
       let jsonString = JSON.stringify(json);
       args.push(jsonString);
       this.redisClient.zadd(...args);
-      this.redisClient.set(`schedFunc:${json.args.call}:${json.id}`, true, 'PXAT', parseInt(timestamp));
+      this.redisClient.set(`schedFunc:${json.args.call}:${json.id}`, true, 'PXAT', parseInt(timestamp)); 
       return 'scheduled';
     } catch (err) {
       debug('===> Error at emitToSortedSet <===');
       debug(err);
     }
+  }
+
+  setAsExecuted({ key, id, json }) {
+    this.redisClient.zrem(key, JSON.stringify(json));
+    json.isExecuted = true;
+    this.redisClient.zadd(key, id, JSON.stringify(json));
   }
 
   async isCallExist(func) {
@@ -69,6 +92,14 @@ module.exports = class RedisTimeMachine {
   async delay(time) {
     return new Promise((resolve, reject) => {
       this.timer.setTimeout(() => {
+        resolve(true);
+      }, '', time)
+    })
+  }
+
+  async delayClean(time) {
+    return new Promise((resolve, reject) => {
+      this.cleanerTimer.setTimeout(() => {
         resolve(true);
       }, '', time)
     })

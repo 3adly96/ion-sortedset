@@ -31,6 +31,7 @@ const run = async () => {
         },
         segmantDuration: segmant
     });
+    sortedSetCli.setCleaner({ key });
 }
 
 run({});
