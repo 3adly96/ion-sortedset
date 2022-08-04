@@ -3,10 +3,11 @@ const emptyCb = () => { };
 const path = require('path');
 
 class Consumer {
-    constructor({ url, key, timestamp, keepAlive, onMessage, onError, onClose, segmantDuration }) {
+    constructor({ url, key, executionkey, timestamp, keepAlive, onMessage, onError, onClose, segmantDuration }) {
 
         this.url             = url;
         this.key             = key;
+        this.executionkey    = executionkey
         this.timestamp       = timestamp;
         this.segmantDuration = segmantDuration
         this.keepAlive       = keepAlive || false;
@@ -54,6 +55,7 @@ class Consumer {
             env: {
                 ION_SS_URL: this.url,
                 ION_SS_KEY: this.key,
+                ION_SS_EXECUTEKEY: this.executionkey,
                 ION_SS_TIMESTAMP: this.timestamp,
                 ION_SS_SEGMANT: this.segmantDuration
             }
@@ -81,8 +83,8 @@ class Producer {
         return this.sortedSetCli.emitToSortedSet({ json, key, timestamp });
     }
 
-    setAsExecuted({ key, id, json }) {
-        return this.sortedSetCli.setAsExecuted({ key, id, json });
+    setAsExecuted({ executionkey, id, json }) {
+        return this.sortedSetCli.setAsExecuted({ executionkey, id, json });
     }
 }
 

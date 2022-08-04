@@ -1,8 +1,9 @@
-const url = process.env.ION_SS_URL;
-const key = process.env.ION_SS_KEY;
-const timestamp = process.env.ION_SS_TIMESTAMP;
-const segmant = process.env.ION_SS_SEGMANT;
-const debug = require('debug')('ion-sortedset');
+const url           = process.env.ION_SS_URL;
+const key           = process.env.ION_SS_KEY;
+const executionkey  = process.env.ION_SS_EXECUTEKEY;
+const timestamp     = process.env.ION_SS_TIMESTAMP;
+const segmant       = process.env.ION_SS_SEGMANT;
+const debug         = require('debug')('ion-sortedset');
 
 
 //check if arugment is passed correctly 
@@ -31,7 +32,7 @@ const run = async () => {
         },
         segmantDuration: segmant
     });
-    sortedSetCli.setCleaner({ key });
+    sortedSetCli.setCleaner({ key, executionkey });
 }
 
 run({});

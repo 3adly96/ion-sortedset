@@ -8,21 +8,21 @@ module.exports = class RedisTimeMachine {
     this.redisClient  = require('./connect').createClient({ url });
     this.timer        = new NanoTimer();
     this.cleanerTimer = new NanoTimer();
+    this.cleanUpDelay = 60;
     this.ftimestamp   = 0;
+    this.timestamp    = null;
   }
 
   async listenToSortedSet({ key, timestamp, onData, segmantDuration }) {
+    this.timestamp = timestamp;
     try {
-      let now = Date.now();
-      if (Math.floor(timestamp) + 1 > now) {
-        await this.delay('1m');
-        return this.listenToSortedSet({ key: key, timestamp: timestamp, onData, segmantDuration })
+      if (Math.floor(timestamp) + 500 > Date.now()) {
+        await this.delay(segmantDuration + 'm');
+        return this.listenToSortedSet({ key, timestamp, onData, segmantDuration })
       }
-      await this.delay(segmantDuration + 'm');
       let args = [key, timestamp, Math.floor(timestamp) + Math.floor(segmantDuration)  , 'WITHSCORES'];
       let functions = await this.redisClient.zrangebyscore(...args);
       if (functions.length !== 0) {
-        if (timestamp <= Date.now()) {
           for (let i = 0; i < functions.length; i += 2) {
             let functionId = functions[i + 1];
             let functionObj = JSON.parse(functions[i]);
@@ -33,33 +33,34 @@ module.exports = class RedisTimeMachine {
             onData(p);
           }
         }
-        else {
-          await this.delay('500m');
-          return this.listenToSortedSet({ key: key, timestamp: timestamp, onData, segmantDuration });
-        }
-      }
-      this.listenToSortedSet({ key: key, timestamp: Math.floor(timestamp) + Math.floor(segmantDuration) + 1, onData, segmantDuration });
+      this.listenToSortedSet({ key, timestamp: Math.floor(timestamp) + Math.floor(segmantDuration) + 1, onData, segmantDuration });
     } catch (err) {
       debug('===> Error at listenToSortedSet <===');
       debug(err);
     }
   }
 
-  async setCleaner({ key }) {
+  async setCleaner({ executionkey, key }) {
     let retries = [];
-    const interv = 1000*60;
+    const interv = 1000 * (this.cleanUpDelay / 2); //delays clean up for a minute half here and half in the redis call
     await this.delayClean(`${interv}m`);
-    const timestamp = Date.now();
-    const args = [key, '-INF', timestamp];
-    const orders = await this.redisClient.zrangebyscore(...args);
-    for(const order of orders) {
-      if(!order.includes('"isExecuted":true')) retries.push(order);
+    const timestamp = Date.now()
+    const args            = [key, '-INF', timestamp - interv];
+    const execArgs        = [executionkey, '-INF', timestamp - interv];
+    const orders          = await this.redisClient.zrangebyscore(...args);
+    const executedOrders  = await this.redisClient.zrangebyscore(...execArgs);
+    // console.log('executedOrders',executedOrders)
+    // console.log('orders',orders)
+    for (const order of orders) {
+      if (!executedOrders.includes(order)) retries.push(order);
     }
-    for(const retrie of retries) {
-      this.redisClient.zadd(key, Date.now()+5000, retrie);
+    // console.log('retries',retries)
+    for (const retry of retries) {
+      this.redisClient.zadd(key, Date.now() + 5000, retry);
     }
     this.redisClient.zremrangebyscore(...args);
-    this.setCleaner({ key });
+    this.redisClient.zremrangebyscore(...execArgs);
+    this.setCleaner({ executionkey, key });
   }
 
   async emitToSortedSet({ key, json, timestamp }) {
@@ -79,10 +80,9 @@ module.exports = class RedisTimeMachine {
     }
   }
 
-  setAsExecuted({ key, id, json }) {
+  setAsExecuted({ executionkey, id, json }) {
     // this.redisClient.zrem(key, JSON.stringify(json));
-    json.isExecuted = true;
-    this.redisClient.zadd(key, id, JSON.stringify(json));
+    this.redisClient.zadd(executionkey, id, JSON.stringify(json));
   }
 
   async isCallExist(func) {
