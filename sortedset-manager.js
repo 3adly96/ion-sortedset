@@ -80,7 +80,7 @@ module.exports = class RedisTimeMachine {
   }
 
   setAsExecuted({ key, id, json }) {
-    this.redisClient.zrem(key, JSON.stringify(json));
+    // this.redisClient.zrem(key, JSON.stringify(json));
     json.isExecuted = true;
     this.redisClient.zadd(key, id, JSON.stringify(json));
   }
