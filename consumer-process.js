@@ -4,21 +4,38 @@ const executionkey  = process.env.ION_SS_EXECUTEKEY;
 const timestamp     = process.env.ION_SS_TIMESTAMP;
 const segmant       = process.env.ION_SS_SEGMANT;
 const debug         = require('debug')('ion-sortedset');
-
+let sortedSetCli    = {};
 
 //check if arugment is passed correctly 
 if (!url) throw Error('missing arguments');
 
 //load client for that specific event 
-const RedisTimeMachine = require('./sortedset-manager.js');
-const sortedSetCli = new RedisTimeMachine({ url: url });
+try{
+    const RedisTimeMachine = require('./sortedset-manager.js');
+    sortedSetCli = new RedisTimeMachine({ url: url });
+} catch (err) {
+    process.exit(1);
+}
 
 // SIGTERM AND SIGINT will trigger the exit event.
-process.once("SIGTERM", function () {
-    process.exit(0);
+process.on("SIGTERM", function () {
+    console.log('consumer process existed SIGTERM')
+    process.exit(1);
 });
-process.once("SIGINT", function () {
-    process.exit(0);
+
+process.on("SIGINT", function () {
+    console.log('consumer process existed SIGINT')
+    process.exit(1);
+});
+
+process.on('error', function (err) {
+    console.log(err);
+    process.exit(1);
+});
+
+process.on('uncaughtException', function (err) {
+    // console.log(err);
+    process.exit(1);
 });
 
 
@@ -28,7 +45,11 @@ const run = async () => {
         key: key,
         timestamp: timestamp,
         onData: (result) => {
-            process.send(result);
+            try {
+                process.send(result);
+            } catch(err){
+                console.log(err);
+            }
         },
         segmantDuration: segmant
     });

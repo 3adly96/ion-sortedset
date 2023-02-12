@@ -39,15 +39,11 @@ class Consumer {
     }
 
     processListeners(){
-        //do something when app is closing
-        process.on('exit', this.exitHandler.bind(null, this.child));
-
-        //catches ctrl+c event
-        process.on('SIGINT', this.exitHandler.bind(null, this.child));
-
-        // catches "kill pid" (for example: nodemon restart)
-        process.on('SIGUSR1', this.exitHandler.bind(null, this.child));
-        process.on('SIGUSR2', this.exitHandler.bind(null, this.child));
+        process.on('exit', this.close.bind(this))
+            .on('uncaughtException', this.close.bind(this))
+            .on('SIGINT', this.close.bind(this))
+            .on('SIGUSR1', this.close.bind(this))
+            .on('SIGUSR2', this.close.bind(this))
     }
 
     fork() {
@@ -70,6 +66,10 @@ class Consumer {
             this._faultHandler();
             this.onClose();
         });
+        this.child.on('exit', ()=> {
+            this._faultHandler();
+            this.onClose();
+        })
     }
 }
 
